@@ -40,7 +40,7 @@ def load_dim_tipo_transferencia():
         password = DB_PASSWORD,
         database = DB_NAME
     )
-    cursor = conn.cursor()
+    cursor = conn.cursor() # Executador de comandos sql
 
     # Criar tabela se não existir
     cursor.execute ("""
