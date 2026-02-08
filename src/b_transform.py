@@ -60,8 +60,65 @@ def transform_tipos_transferencia():
     print(f"Silver salvo em: {out_file} ({len(df)} linhas)")
     return out_file
 
+
+def transform_documento_despesa():
+    # Lê JSON de documentos (bronze) e salva em parquet (silver)
+    SILVER_DIR.mkdir(parents=True, exist_ok=True)
+
+    files = sorted(
+        BRONZE_DIR.glob("despesas_documentos_*.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True
+    )
+    if not files:
+        raise FileNotFoundError("Nenhum arquivo despesas_documentos_*.json encontrado na bronze.")
+
+    in_file = files[0]
+    print(f"Lendo bronze: {in_file.name}")
+
+    with open(in_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    df = pd.json_normalize(data)
+
+    # Colunas que gostaría de manter (se existirem)
+    wanted = [
+        "codigo", "id", "documento", "numeroDocumento",
+        "ano", "mes",
+        "valor", "valorDocumento",
+        "orgao", "orgaoSuperior", "unidadeGestora",
+        "data", "dataEmissao",
+        "tipoTransferencia.id", "tipoTransferencia.descricao"
+    ]
+
+    cols = [c for c in wanted if c in df.columns]
+    df = df[cols] if cols else df
+
+    # Padroniza nomes (troca . por _)
+    df.columns = [c.replace(".", "_") for c in df.columns]
+
+    # Cria uma chave do documento (para usar como PK no MySQL depois)
+    if "codigo" in df.columns:
+        df["doc_key"] = df["codigo"].astype(str)
+    elif "id" in df.columns:
+        df["doc_key"] = df["id"].astype(str)
+    else:
+        df["doc_key"] = df.index.astype(str)  # fallback
+
+    out_ref = datetime.now().strftime("%Y_%m_%d")
+    out_file = SILVER_DIR / f"fato_documentos_despesa_{out_ref}.parquet"
+
+    df.to_parquet(out_file, index=False)
+    print(f"Silver salvo em: {out_file} ({len(df)} linhas)")
+
+    return out_file
+
+
 if __name__ == "__main__":
     transform_tipos_transferencia()
+    transform_documento_despesa()
+
+    
 
 
 
