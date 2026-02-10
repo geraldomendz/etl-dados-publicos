@@ -16,7 +16,7 @@ O projeto foi desenvolvido com **Python, Pandas, Parquet e MySQL**, aplicando a 
 ---
 
 ## Arquitetura
-
+'''
 etl_dados_publicos/
 │
 ├── src/
@@ -40,6 +40,7 @@ etl_dados_publicos/
 ├── .env.example
 ├── requirements.txt
 └── README.md
+'''
 
 ---
 
