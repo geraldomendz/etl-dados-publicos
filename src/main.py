@@ -1,35 +1,45 @@
 
+from logger_config import setup_logger
+
 from datetime import datetime
 from a_extract import extract_tipos_transferencia, extract_documentos_despesa
 from b_transform import transform_tipos_transferencia, transform_documento_despesa
 from c_load import load_dim_tipo_transferencia, load_fato_documentos_despesa
 
-
+logger = setup_logger()
 
 def run_pipeline():
     start = datetime.now()
-    print(f"\n Iniciando pipeline ETL - {start.strftime('%Y-%m-%d %H:%M:%S')}\n")
+    logger.info("Iniciando pipeline ETL - %s", start.strftime("%Y-%m-%d %H:%M:%S"))
 
-    # Extract bronze
-    print("EXTRACT (Bronze)")
-    extract_tipos_transferencia()
-    extract_documentos_despesa()
-    print("Extração finalizada\n")
 
-    # Transform silver
-    print("TRANSFORM (Silver)")
-    transform_tipos_transferencia()
-    transform_documento_despesa()
-    print("Transform finalizado\n")
+    try:
+        # Extract bronze
+        logger.info("EXTRACT (Bronze) - iniciando")
+        extract_tipos_transferencia()
+        extract_documentos_despesa()
+        logger.info("EXTRACT (Bronze) - finalizado")
 
-    # Load (Mysql)
-    print("LOAD (Mysql)")
-    load_dim_tipo_transferencia()
-    load_fato_documentos_despesa()
-    print("Load finalizado\n")
+        # Transform silver
+        logger.info("TRANSFORM (Silver) - iniciando")
+        transform_tipos_transferencia()
+        transform_documento_despesa()
+        logger.info("TRANSFORM (Silver) - finalizado")
 
-    end = datetime.now()
-    print(f"Pipeline concluído em {(end-start).total_seconds():.1f}s\n")
+        # Load (Mysql)
+        logger.info("LOAD (MySQL) - iniciando")
+        load_dim_tipo_transferencia()
+        load_fato_documentos_despesa()
+        logger.info("LOAD (MySQL) - finalizado")
+
+        end = datetime.now()
+        logger.info("Pipeline concluído em %.1fs", (end - start).total_seconds())
+
+    except Exception:
+          # Loga erro + stacktrace
+        logger.exception("Falha no pipeline")
+        raise
+
 
 if __name__ == "__main__":
     run_pipeline()

@@ -1,11 +1,13 @@
 
+import logging
 import os
 from pathlib import Path
 import pandas as pd
 import mysql.connector
 from dotenv import load_dotenv
 
-# Caminhos e ambiente
+# Configurações
+logger = logging.getLogger("etl")
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path = BASE_DIR / ".env")
 SILVER_DIR = BASE_DIR / "data" / "silver"
@@ -21,6 +23,7 @@ def get_latesd_file(pattern: str) -> Path:
     # Retorna o arquivo mais recente por data de modificação
     files = sorted(SILVER_DIR.glob(pattern), key = lambda p: p.stat().st_mtime, reverse = True)
     if not files:
+        logger.error(f"Nenhum arquivo parquet encontrado em silver com padrão: {pattern}")
         raise FileNotFoundError(f"Nenhum arquivo parquet encontrado em silver com padrão: {pattern}")
     return files[0]
 
@@ -28,7 +31,7 @@ def get_latesd_file(pattern: str) -> Path:
 def load_dim_tipo_transferencia():
     # Ler parquet mais recente
     parquet_file = get_latesd_file("dim_tipo_transferencia_*.parquet")
-    print(f"Lendo silver: {parquet_file.name}")
+    logger.info(f"Lendo silver: {parquet_file.name}")
 
     df = pd.read_parquet(parquet_file)
 
@@ -62,7 +65,7 @@ def load_dim_tipo_transferencia():
 
     conn.commit()
 
-    print(f"Tudo certo! {cursor.rowcount} registros carregados na tabela dim_tipo_transferencia")
+    logger.info(f"Tudo certo! {cursor.rowcount} registros carregados na tabela dim_tipo_transferencia")
 
     cursor.close()
     conn.close()
@@ -70,7 +73,7 @@ def load_dim_tipo_transferencia():
 
 def load_fato_documentos_despesa():
     parquet_file = get_latesd_file("fato_documentos_despesa_*.parquet")
-    print(f"Lendo silver: {parquet_file.name}")
+    logger.info(f"Lendo silver: {parquet_file.name}")
 
     df = pd.read_parquet(parquet_file)
 
@@ -142,7 +145,7 @@ def load_fato_documentos_despesa():
     cursor.executemany(sql, rows)
 
     conn.commit()
-    print(f"Tudo certo! {cursor.rowcount} registros inseridos/atualizados em fato_documento_despesa")
+    logger.info(f"Tudo certo! {cursor.rowcount} registros inseridos/atualizados em fato_documento_despesa")
 
     cursor.close()
     conn.close()
@@ -151,29 +154,4 @@ def load_fato_documentos_despesa():
 if __name__ == "__main__":
     load_dim_tipo_transferencia()
     load_fato_documentos_despesa()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-if __name__== "__main__":
-    load_dim_tipo_transferencia()
-
-
-
 

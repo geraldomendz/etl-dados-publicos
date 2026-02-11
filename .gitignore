@@ -15,3 +15,8 @@ logs/
 
 # VS Code
 .vscode/
+
+# Logs
+logs/*.log
+logs/*.log.*
+

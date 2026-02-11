@@ -1,13 +1,13 @@
 
+import logging
 import json
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
 
-# Raiz do projeto
-
+# Configurações
+logger = logging.getLogger("etl")
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 BRONZE_DIR = BASE_DIR / "data" / "bronze"
 SILVER_DIR = BASE_DIR / "data" / "silver"
 
@@ -15,6 +15,7 @@ def get_latesd_file(pattern: str) -> Path:
     # Retorna o arquivo mais recente por data de modificação
     files = sorted(BRONZE_DIR.glob(pattern), key = lambda p: p.stat().st_mtime, reverse = True)
     if not files:
+        logger.error(f"Nenhum arquivo encontrado em bronze com padrão: {pattern}")
         raise FileNotFoundError(f"Nenhum arquivo encontrado em bronze com padrão: {pattern}")
     return files[0]
 
@@ -23,8 +24,8 @@ def transform_tipos_transferencia():
     # Lê o JSON bruto (bronze) de tipos de transferência, faz padronizações simples e salva na camada silver
     SILVER_DIR.mkdir(parents = True, exist_ok = True)
 
-    bronze_file = get_latesd_file("despesas_tipos_transferencia_*.JSON")
-    print(f"Lendo bronze: {bronze_file.name}")
+    bronze_file = get_latesd_file("despesas_tipos_transferencia_*.json")
+    logger.info(f"Lendo bronze: {bronze_file.name}")
 
     # Ler JSON (lista de objetos)
     with open(bronze_file, "r", encoding = "utf-8") as f:
@@ -40,6 +41,7 @@ def transform_tipos_transferencia():
     missing = expected - set(df.columns)
 
     if missing:
+        logger.error(f"Colunas esperadas não encontradas: {missing}. Colunas atuais: {list(df.columns)}")
         raise ValueError(f"Colunas esperadas não encontradas: {missing}. Colunas atuais: {list(df.columns)}")
     
     df = df[["id","descricao"]].copy()
@@ -57,7 +59,7 @@ def transform_tipos_transferencia():
     out_file = SILVER_DIR / f"dim_tipo_transferencia_{data_ref}.parquet"
     df.to_parquet(out_file, index = False)
 
-    print(f"Silver salvo em: {out_file} ({len(df)} linhas)")
+    logger.info(f"Silver salvo em: {out_file} ({len(df)} linhas)")
     return out_file
 
 
@@ -71,10 +73,11 @@ def transform_documento_despesa():
         reverse=True
     )
     if not files:
+        logger.error("Nenhum arquivo despesas_documentos_*.json encontrado na bronze.")
         raise FileNotFoundError("Nenhum arquivo despesas_documentos_*.json encontrado na bronze.")
 
     in_file = files[0]
-    print(f"Lendo bronze: {in_file.name}")
+    logger.info(f"Lendo bronze: {in_file.name}")
 
     with open(in_file, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -109,7 +112,7 @@ def transform_documento_despesa():
     out_file = SILVER_DIR / f"fato_documentos_despesa_{out_ref}.parquet"
 
     df.to_parquet(out_file, index=False)
-    print(f"Silver salvo em: {out_file} ({len(df)} linhas)")
+    logger.info(f"Silver salvo em: {out_file} ({len(df)} linhas)")
 
     return out_file
 
